@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../App';
 import { Button, GlassCard } from '../components/Components';
@@ -22,12 +21,12 @@ const OnboardingPage: React.FC = () => {
   
   // UI State
   const [showErrors, setShowErrors] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Validation Logic
   const getStepError = (): string | null => {
       switch(step) {
           case 1: 
-              if (!name.trim()) return null; // Name is optional-ish or just strictly required? Let's make it required.
               if (name.trim().length === 0) return "Введите ваше имя";
               const ageNum = parseInt(age);
               if (!age || isNaN(ageNum)) return "Укажите возраст";
@@ -85,6 +84,23 @@ const OnboardingPage: React.FC = () => {
       if (step > 1) setStep(s => s - 1);
   };
 
+  const triggerDatePicker = () => {
+    // Explicitly show picker to ensure desktop interaction works
+    const input = dateInputRef.current;
+    if (input) {
+        try {
+            if (typeof (input as any).showPicker === 'function') {
+                (input as any).showPicker();
+            } else {
+                input.focus();
+                input.click();
+            }
+        } catch (e) {
+            console.warn("Date picker open failed", e);
+        }
+    }
+  };
+
   // Telegram Integration
   const handleNextRef = useRef(handleNext);
   const handleBackRef = useRef(handleBack);
@@ -104,10 +120,6 @@ const OnboardingPage: React.FC = () => {
       const backBtn = tg.BackButton;
 
       mainBtn.setText(step === totalSteps ? "ГОТОВО" : "ДАЛЕЕ");
-      
-      // We keep the button enabled to show validation alerts on click, 
-      // but visually we might want to hint it. 
-      // For Telegram UX, it's often better to leave it enabled and show alert on click if invalid.
       mainBtn.show();
       mainBtn.enable(); 
 
@@ -208,8 +220,11 @@ const OnboardingPage: React.FC = () => {
                 </div>
                 
                 {/* Custom Date Picker Trigger */}
-                <div className="relative">
-                    <GlassCard className={`p-8 flex flex-col items-center justify-center gap-3 transition-colors ${showErrors && !lastPeriod ? 'ring-2 ring-red-200' : ''}`}>
+                <div 
+                    className="relative cursor-pointer group"
+                    onClick={triggerDatePicker}
+                >
+                    <GlassCard className={`p-8 flex flex-col items-center justify-center gap-3 transition-colors group-active:scale-[0.98] ${showErrors && !lastPeriod ? 'ring-2 ring-red-200' : ''}`}>
                         <Calendar size={32} className="text-primary mb-1" />
                         <span className={`text-xl font-bold ${lastPeriod ? 'text-gray-800' : 'text-gray-400'}`}>
                             {formattedDate}
@@ -221,6 +236,7 @@ const OnboardingPage: React.FC = () => {
                     
                     {/* Invisible Input Overlay - Ensures click works everywhere */}
                     <input
+                        ref={dateInputRef}
                         type="date"
                         value={lastPeriod}
                         max={new Date().toISOString().split('T')[0]}
