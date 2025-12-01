@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../App';
 import { GlassCard, BottomSheet, Button } from '../components/Components';
-import { ChevronLeft, ChevronRight, Edit2, X, Calendar as CalIcon, Droplet, ChevronDown, Heart, Shield, ShieldAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, X, Calendar as CalIcon, Droplet, ChevronDown, Heart, Shield, ShieldAlert, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { formatDate, haptic } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { MoodTranslation } from '../types';
@@ -158,12 +158,12 @@ const CalendarPage: React.FC = () => {
 
       {showYearPicker && (
           <GlassCard className="mb-4 mx-4 p-4 flex justify-between items-center animate-in slide-in-from-top-4 border-2 border-primary/20">
-              <button onClick={() => changeYear(-1)} className="p-3 bg-white shadow-sm rounded-xl text-primary"><ChevronLeft size={20}/></button>
+              <button onClick={() => changeYear(-1)} className="p-3 bg-white shadow-sm rounded-xl text-primary flex items-center gap-1"><ChevronsLeft size={20}/></button>
               <div className="flex flex-col items-center">
                   <span className="text-xs text-gray-500 uppercase tracking-widest font-bold">Год</span>
                   <span className="font-bold text-3xl text-gray-800">{currentDate.getFullYear()}</span>
               </div>
-              <button onClick={() => changeYear(1)} className="p-3 bg-white shadow-sm rounded-xl text-primary"><ChevronRight size={20}/></button>
+              <button onClick={() => changeYear(1)} className="p-3 bg-white shadow-sm rounded-xl text-primary flex items-center gap-1"><ChevronsRight size={20}/></button>
           </GlassCard>
       )}
 
@@ -187,12 +187,13 @@ const CalendarPage: React.FC = () => {
       <BottomSheet isOpen={!!selectedDate} onClose={() => setSelectedDate(null)}>
          {selectedDate && (
              <div className="relative pt-2">
-                 {/* Explicit Close Button - Positioned INSIDE the container */}
+                 {/* Explicit Close Button - Fixed to ensure visibility */}
                  <button 
                     onClick={() => setSelectedDate(null)} 
-                    className="absolute top-0 right-0 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors z-50 shadow-sm"
+                    className="absolute top-0 right-0 p-2.5 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors z-50 shadow-sm"
+                    aria-label="Закрыть"
                  >
-                     <X size={20} />
+                     <X size={22} />
                  </button>
 
                  <h3 className="text-xl font-bold text-gray-800 mb-1 pr-10">

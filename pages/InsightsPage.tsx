@@ -5,6 +5,7 @@ import { GlassCard } from '../components/Components';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { MoodTranslation } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 
 const InsightsPage: React.FC = () => {
   const { logs, settings } = useApp();
@@ -93,9 +94,9 @@ const InsightsPage: React.FC = () => {
                   <p className="font-bold text-gray-800 mb-2 drop-shadow-sm">Открыть полную аналитику</p>
                   <button 
                     onClick={() => navigate('/settings')}
-                    className="bg-gradient-to-r from-primary to-purple-500 text-white px-6 py-2 rounded-full font-semibold shadow-lg transform active:scale-95 transition-transform"
+                    className="bg-gradient-to-r from-primary to-purple-500 text-white px-6 py-2 rounded-full font-semibold shadow-lg transform active:scale-95 transition-transform flex items-center gap-2"
                   >
-                      Купить PRO
+                      <Lock size={16} /> Купить PRO за 199₽
                   </button>
               </div>
           )}

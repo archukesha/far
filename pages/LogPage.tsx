@@ -13,8 +13,7 @@ const LogPage: React.FC = () => {
   const navigate = useNavigate();
   const dateParam = searchParams.get('date') || formatDate(new Date());
   const initialMood = searchParams.get('mood');
-  const sliderContainerRef = useRef<HTMLDivElement>(null);
-
+  
   // Safe accessor for existing log to handle migration from old `mood` to new `moods`
   const getExistingLog = (): DayLog => {
     const log = logs[dateParam];
@@ -125,19 +124,6 @@ const LogPage: React.FC = () => {
       setIsDirty(true);
   };
 
-  const handleSliderClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (sliderContainerRef.current) {
-          const rect = sliderContainerRef.current.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const percentage = Math.max(0, Math.min(1, x / rect.width));
-          const rawValue = percentage * 14; // Max 14 hours
-          // Round to nearest 0.5
-          const newValue = Math.round(rawValue * 2) / 2;
-          update('sleepHours', newValue);
-          haptic.selection();
-      }
-  };
-
   return (
     <div className="pt-4 pb-24 space-y-6">
       
@@ -220,7 +206,7 @@ const LogPage: React.FC = () => {
 
       {/* Common Sliders */}
       <GlassCard className="p-5 space-y-6">
-          {/* Sleep */}
+          {/* Sleep - Revised with native input overlay for reliable touch seeking */}
           <div>
               <div className="flex justify-between mb-3">
                   <span className="text-gray-700 font-medium flex items-center gap-2"><Moon size={16}/> Сон</span>
@@ -228,39 +214,35 @@ const LogPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-4">
                   <button 
-                    onClick={() => { haptic.selection(); update('sleepHours', Math.max(0, form.sleepHours - 0.5)); }}
+                    onClick={() => { haptic.selection(); update('sleepHours', Math.max(0, Number(form.sleepHours) - 0.5)); }}
                     className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform"
                   >
                       <Minus size={18} />
                   </button>
                   
-                  {/* Slider Container - Enhanced to support click-to-set */}
-                  <div 
-                    ref={sliderContainerRef}
-                    className="relative flex-1 h-12 flex items-center cursor-pointer group touch-none"
-                    onClick={handleSliderClick}
-                  >
+                  {/* Slider Container */}
+                  <div className="relative flex-1 h-12 flex items-center group cursor-pointer">
                     {/* Track Background */}
-                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden absolute">
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden absolute pointer-events-none">
                         {/* Fill */}
-                        <div className="h-full bg-primary transition-all duration-150 ease-out" style={{ width: `${(form.sleepHours / 14) * 100}%` }} />
+                        <div className="h-full bg-primary transition-all duration-150 ease-out" style={{ width: `${(Number(form.sleepHours) / 14) * 100}%` }} />
                     </div>
                     {/* Thumb (Visual Only) */}
                     <div 
                         className="absolute h-7 w-7 bg-white border-2 border-primary rounded-full shadow-lg pointer-events-none transition-all duration-150 ease-out z-10"
-                        style={{ left: `calc(${(form.sleepHours / 14) * 100}% - 14px)` }}
+                        style={{ left: `calc(${(Number(form.sleepHours) / 14) * 100}% - 14px)` }}
                     />
-                    {/* Native Input: Still here for dragging, but higher z-index and opacity-0 */}
+                    {/* Native Input - for dragging support AND tapping */}
                     <input 
                         type="range" min="0" max="14" step="0.5" 
                         value={form.sleepHours} 
                         onChange={(e) => update('sleepHours', parseFloat(e.target.value))}
-                        className="w-full h-full opacity-0 cursor-pointer z-20 absolute inset-0"
+                        className="w-full h-full opacity-0 cursor-pointer z-20 absolute inset-0 touch-pan-y"
                     />
                   </div>
                   
                   <button 
-                    onClick={() => { haptic.selection(); update('sleepHours', Math.min(14, form.sleepHours + 0.5)); }}
+                    onClick={() => { haptic.selection(); update('sleepHours', Math.min(14, Number(form.sleepHours) + 0.5)); }}
                     className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform"
                   >
                       <Plus size={18} />
@@ -349,8 +331,8 @@ const LogPage: React.FC = () => {
                             <Thermometer size={16} className="text-rose-400"/>
                             <input 
                                 type="number" step="0.1" placeholder="36.6" 
-                                value={form.temperature || ''}
-                                onChange={e => update('temperature', parseFloat(e.target.value))}
+                                value={form.temperature ?? ''}
+                                onChange={e => update('temperature', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                                 className="bg-transparent w-full font-bold text-gray-800 focus:outline-none placeholder-gray-300"
                             />
                         </div>
@@ -361,8 +343,8 @@ const LogPage: React.FC = () => {
                             <Weight size={16} className="text-blue-400"/>
                             <input 
                                 type="number" step="0.1" placeholder="60.0" 
-                                value={form.weight || ''}
-                                onChange={e => update('weight', parseFloat(e.target.value))}
+                                value={form.weight ?? ''}
+                                onChange={e => update('weight', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                                 className="bg-transparent w-full font-bold text-gray-800 focus:outline-none placeholder-gray-300"
                             />
                         </div>
@@ -377,7 +359,7 @@ const LogPage: React.FC = () => {
                              <button 
                                 key={t} 
                                 onClick={() => update('discharge', t)}
-                                className={`py-3 px-2 text-xs rounded-xl border transition-all flex items-center justify-center gap-2 ${form.discharge === t ? 'bg-blue-600 border-blue-600 text-white shadow-md font-bold' : 'bg-white/40 border-gray-300 text-gray-600 hover:bg-white/60'}`}
+                                className={`py-3 px-2 text-xs rounded-xl border transition-all flex items-center justify-center gap-2 ${form.discharge === t ? 'bg-indigo-600 border-indigo-600 text-white shadow-md font-bold ring-2 ring-indigo-200' : 'bg-white/40 border-gray-300 text-gray-600 hover:bg-white/60'}`}
                              >
                                  {DischargeTranslation[t] || t}
                                  {form.discharge === t && <Check size={14} className="text-white"/>}
@@ -400,7 +382,7 @@ const LogPage: React.FC = () => {
                                  <button 
                                     key={l}
                                     onClick={() => update('energy', l)}
-                                    className={`py-2 text-xs rounded-lg transition-all border ${form.energy === l ? 'bg-yellow-500 border-yellow-500 text-white font-bold shadow-sm' : 'bg-white/50 border-gray-300 text-gray-500 hover:bg-white/70'}`}
+                                    className={`py-2 text-xs rounded-lg transition-all border ${form.energy === l ? 'bg-yellow-600 border-yellow-600 text-white font-bold shadow-sm' : 'bg-white/50 border-gray-300 text-gray-500 hover:bg-white/70'}`}
                                  >
                                      {l === 'Low' ? 'Низкая' : l === 'Medium' ? 'Средняя' : 'Высокая'}
                                  </button>
@@ -414,7 +396,7 @@ const LogPage: React.FC = () => {
                                  <button 
                                     key={l}
                                     onClick={() => update('stress', l)}
-                                    className={`py-2 text-xs rounded-lg transition-all border ${form.stress === l ? 'bg-rose-500 border-rose-500 text-white font-bold shadow-sm' : 'bg-white/50 border-gray-300 text-gray-500 hover:bg-white/70'}`}
+                                    className={`py-2 text-xs rounded-lg transition-all border ${form.stress === l ? 'bg-rose-600 border-rose-600 text-white font-bold shadow-sm' : 'bg-white/50 border-gray-300 text-gray-500 hover:bg-white/70'}`}
                                  >
                                      {l === 'Low' ? 'Низкий' : l === 'Medium' ? 'Средний' : 'Высокий'}
                                  </button>

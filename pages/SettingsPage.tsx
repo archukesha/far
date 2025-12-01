@@ -30,6 +30,32 @@ const SettingsPage: React.FC = () => {
       }
   }
 
+  const togglePro = () => {
+      haptic.impact('medium');
+      
+      if (settings.isPro) {
+          if (confirm('Отключить подписку? Вы потеряете доступ к PRO функциям.')) {
+              updateSettings({ isPro: false });
+          }
+          return;
+      }
+
+      // Simulate payment flow with confirmation
+      if (confirm("Перейти к оплате подписки FemCycle PRO?\n\nЦена: 199₽ / месяц\n\nВы будете перенаправлены на форму оплаты.")) {
+          // In a real app, this would redirect to payment gateway
+          // Simulating async success
+          setTimeout(() => {
+              updateSettings({ isPro: true });
+              haptic.success();
+              if (window.Telegram?.WebApp) {
+                  window.Telegram.WebApp.showAlert("Оплата прошла успешно! Подписка FemCycle PRO активирована.");
+              } else {
+                  alert("Оплата прошла успешно! Подписка FemCycle PRO активирована.");
+              }
+          }, 800);
+      }
+  };
+
   return (
     <div className="pt-4 pb-10 space-y-6">
       <div className="flex items-center gap-4 px-2">
@@ -116,19 +142,16 @@ const SettingsPage: React.FC = () => {
 
               {!settings.isPro && (
                   <div className="mb-4 text-center">
-                      <span className="text-2xl font-bold text-white">199₽</span>
+                      <span className="text-3xl font-bold text-white">199₽</span>
                       <span className="text-gray-400 text-sm"> / месяц</span>
                   </div>
               )}
 
               <button 
-                onClick={() => {
-                    haptic.impact('medium');
-                    updateSettings({ isPro: !settings.isPro });
-                }}
+                onClick={togglePro}
                 className={`w-full py-3.5 font-bold rounded-xl transition-all active:scale-95 ${settings.isPro ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 shadow-lg shadow-yellow-500/30'}`}
               >
-                  {settings.isPro ? 'Отключить подписку' : 'Оформить подписку'}
+                  {settings.isPro ? 'Отключить подписку' : 'Подключить за 199₽'}
               </button>
               {!settings.isPro && <p className="text-center text-xs text-gray-500 mt-3">7 дней бесплатно для новых пользователей</p>}
           </div>

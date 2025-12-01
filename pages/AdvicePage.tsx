@@ -161,55 +161,61 @@ const AdvicePage: React.FC = () => {
 
       {/* Paywall Modal (PRO Content) */}
       <BottomSheet isOpen={showPaywall} onClose={() => setShowPaywall(false)}>
-          <div className="relative text-center px-4 pt-2 pb-6">
-              {/* Close Button for Paywall */}
+          <div className="relative text-center px-4 pt-4 pb-6">
+              {/* Close Button for Paywall - Improved Hitbox and Z-index */}
               <button 
-                onClick={() => setShowPaywall(false)}
-                className="absolute top-0 right-0 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors z-50"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPaywall(false);
+                }}
+                className="absolute top-4 right-4 p-3 bg-white/80 backdrop-blur rounded-full text-gray-600 shadow-sm z-[70] hover:bg-white transition-all active:scale-95"
               >
-                  <X size={20} />
+                  <X size={24} />
               </button>
 
-              <div className="w-14 h-14 bg-gradient-to-tr from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-200">
-                  <Crown size={28} className="text-white" />
+              <div className="w-16 h-16 bg-gradient-to-tr from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-200">
+                  <Crown size={32} className="text-white" />
               </div>
               
               <h3 className="text-xl font-bold text-gray-900 mb-1">Эксклюзивный контент</h3>
-              <p className="text-sm text-gray-500 mb-6">Оформите подписку, чтобы читать эту и другие PRO-статьи.</p>
+              <p className="text-sm text-gray-500 mb-6">Эта статья доступна только по подписке.</p>
 
               {/* Preview Card */}
               {paywallArticle && (
-                  <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left border border-gray-100">
-                      <h4 className="font-bold text-gray-800 text-sm mb-1 line-clamp-1">{paywallArticle.title}</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
-                          {paywallArticle.preview}
+                  <div className="bg-white/60 p-5 rounded-2xl mb-6 text-left border border-gray-200 shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bg-yellow-400 text-xs font-bold px-2 py-1 text-gray-900 rounded-bl-lg">PREVIEW</div>
+                      <h4 className="font-bold text-gray-800 text-base mb-2">{paywallArticle.title}</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed italic">
+                          "{paywallArticle.preview}"
                       </p>
-                      <div className="mt-2 h-4 bg-gradient-to-b from-transparent to-gray-50 -mt-4 relative z-10" />
+                      <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-primary">
+                          <Lock size={12}/> Читать далее...
+                      </div>
                   </div>
               )}
 
               <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-2xl p-5 mb-4 shadow-xl">
-                  <div className="flex justify-between items-end mb-2">
+                  <div className="flex justify-between items-end mb-4 border-b border-gray-700 pb-3">
                        <span className="text-lg font-bold">FemCycle PRO</span>
                        <span className="text-2xl font-bold text-yellow-400">199₽</span>
                   </div>
                   <Button 
                     variant="secondary" 
-                    className="w-full bg-yellow-400 hover:bg-yellow-300 text-gray-900 border-none font-bold"
+                    className="w-full bg-yellow-400 hover:bg-yellow-300 text-gray-900 border-none font-bold py-4"
                     onClick={() => {
                         setShowPaywall(false);
                         navigate('/settings');
                     }}
                   >
-                      Оформить подписку <ArrowRight size={16} />
+                      Оформить за 199₽ <ArrowRight size={18} />
                   </Button>
               </div>
 
               <button 
                 onClick={() => setShowPaywall(false)}
-                className="text-sm text-gray-400 font-medium p-2 hover:text-gray-600 transition-colors"
+                className="text-sm text-gray-400 font-medium py-2 px-4 hover:text-gray-600 transition-colors"
               >
-                  Спасибо, я пока посмотрю
+                  Нет, спасибо
               </button>
           </div>
       </BottomSheet>
