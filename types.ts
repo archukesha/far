@@ -58,7 +58,7 @@ export interface DayLog {
   flow: FlowIntensity;
   bleedingColor?: BleedingColor;
   bleedingClots?: boolean;
-  mood?: Mood;
+  moods: Mood[]; // Changed from optional single mood to array
   symptoms: string[]; // e.g., "Спазмы", "Головная боль"
   painLevel?: number; // 0-10
   painLocations?: string[]; // e.g. "Back", "Breasts"

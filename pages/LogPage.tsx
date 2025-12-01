@@ -5,7 +5,7 @@ import { useApp } from '../App';
 import { GlassCard, Button } from '../components/Components';
 import { FlowIntensity, Mood, SYMPTOMS_LIST, DayLog, BleedingColor, DischargeType, MoodTranslation, DischargeTranslation } from '../types';
 import { formatDate, haptic } from '../utils';
-import { Droplet, Moon, GlassWater, Heart, Thermometer, Weight, Zap, Frown, Sparkles, Activity } from 'lucide-react';
+import { Droplet, Moon, GlassWater, Heart, Thermometer, Weight, Zap, Sparkles, Activity, Check, Minus, Plus } from 'lucide-react';
 
 const LogPage: React.FC = () => {
   const { logs, addLog, settings } = useApp();
@@ -13,23 +13,38 @@ const LogPage: React.FC = () => {
   const navigate = useNavigate();
   const dateParam = searchParams.get('date') || formatDate(new Date());
 
-  const existingLog = logs[dateParam] || {
-    date: dateParam,
-    flow: FlowIntensity.None,
-    symptoms: [],
-    sleepHours: 8,
-    waterGlasses: 4,
-    sex: false,
-    notes: '',
-    bleedingClots: false,
-    painLevel: 0,
-    painLocations: [],
-    contraceptiveTaken: false,
-    energy: 'Medium',
-    stress: 'Low',
+  // Safe accessor for existing log to handle migration from old `mood` to new `moods`
+  const getExistingLog = (): DayLog => {
+    const log = logs[dateParam];
+    if (!log) {
+        return {
+            date: dateParam,
+            flow: FlowIntensity.None,
+            symptoms: [],
+            sleepHours: 8,
+            waterGlasses: 4,
+            sex: false,
+            notes: '',
+            moods: [],
+            bleedingClots: false,
+            painLevel: 0,
+            painLocations: [],
+            contraceptiveTaken: false,
+            energy: 'Medium',
+            stress: 'Low',
+        };
+    }
+    // Migration: if log has 'mood' but not 'moods', fix it
+    if ((log as any).mood && (!log.moods || log.moods.length === 0)) {
+        return { ...log, moods: [(log as any).mood] };
+    }
+    // Ensure moods is array
+    if (!log.moods) return { ...log, moods: [] };
+    
+    return log;
   };
 
-  const [form, setForm] = useState<DayLog>(existingLog);
+  const [form, setForm] = useState<DayLog>(getExistingLog());
   const [isDirty, setIsDirty] = useState(false);
   const [viewMode, setViewMode] = useState<'quick' | 'extended'>('quick');
 
@@ -72,6 +87,17 @@ const LogPage: React.FC = () => {
     }));
     setIsDirty(true);
   };
+
+  const toggleMood = (m: Mood) => {
+      haptic.selection();
+      setForm(prev => ({
+          ...prev,
+          moods: prev.moods.includes(m)
+            ? prev.moods.filter(x => x !== m)
+            : [...prev.moods, m]
+      }));
+      setIsDirty(true);
+  }
 
   const update = (field: keyof DayLog, value: any) => {
       setForm(prev => ({ ...prev, [field]: value }));
@@ -132,9 +158,11 @@ const LogPage: React.FC = () => {
                             <button 
                                 key={c}
                                 onClick={() => update('bleedingColor', c)}
-                                className={`w-6 h-6 rounded-full border-2 ${form.bleedingColor === c ? 'ring-2 ring-primary ring-offset-1 border-white' : 'border-transparent'}`}
+                                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${form.bleedingColor === c ? 'ring-2 ring-primary ring-offset-2 border-transparent scale-110' : 'border-transparent'}`}
                                 style={{ backgroundColor: c === 'Pink' ? '#F9A8D4' : c === 'Brown' ? '#78350F' : c === 'Red' ? '#EF4444' : '#1F2937' }}
-                            />
+                            >
+                                {form.bleedingColor === c && <Check size={14} className="text-white"/>}
+                            </button>
                         ))}
                     </div>
                 </div>
@@ -158,8 +186,8 @@ const LogPage: React.FC = () => {
              {Object.values(Mood).map((m) => (
                  <button
                     key={m}
-                    onClick={() => { haptic.selection(); update('mood', m as Mood); }}
-                    className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${form.mood === m ? 'bg-purple-500 text-white border-purple-500' : 'bg-white/40 border-gray-200 text-gray-600'}`}
+                    onClick={() => toggleMood(m)}
+                    className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${form.moods.includes(m) ? 'bg-purple-500 text-white border-purple-500 shadow-md' : 'bg-white/40 border-gray-200 text-gray-600'}`}
                  >
                      {MoodTranslation[m] || m}
                  </button>
@@ -175,7 +203,7 @@ const LogPage: React.FC = () => {
                   <button
                     key={sym}
                     onClick={() => toggleSymptom(sym)}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${form.symptoms.includes(sym) ? 'bg-orange-400 text-white border-orange-400' : 'bg-white/40 border-gray-200 text-gray-500'}`}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${form.symptoms.includes(sym) ? 'bg-orange-400 text-white border-orange-400 shadow-sm' : 'bg-white/40 border-gray-200 text-gray-500'}`}
                   >
                       {sym}
                   </button>
@@ -220,14 +248,15 @@ const LogPage: React.FC = () => {
                 {/* Discharge */}
                 <div>
                      <label className="text-sm font-semibold text-gray-600 mb-2 block">Выделения</label>
-                     <div className="grid grid-cols-3 gap-2">
+                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                          {Object.values(DischargeType).map(t => (
                              <button 
                                 key={t} 
                                 onClick={() => update('discharge', t)}
-                                className={`py-1 text-xs rounded border ${form.discharge === t ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-white/30 border-gray-200'}`}
+                                className={`py-2 px-2 text-xs rounded-lg border transition-all flex items-center justify-center gap-1 ${form.discharge === t ? 'bg-blue-100 border-blue-400 text-blue-700 shadow-sm font-bold ring-1 ring-blue-400' : 'bg-white/40 border-gray-200 text-gray-600'}`}
                              >
                                  {DischargeTranslation[t] || t}
+                                 {form.discharge === t && <Check size={12} />}
                              </button>
                          ))}
                      </div>
@@ -286,25 +315,39 @@ const LogPage: React.FC = () => {
           </>
       )}
 
-      {/* Common Sliders (Always Visible or Extended? Let's keep common ones) */}
+      {/* Common Sliders (Always Visible) */}
       <GlassCard className="p-5 space-y-6">
           {/* Sleep */}
           <div>
-              <div className="flex justify-between mb-2">
+              <div className="flex justify-between mb-3">
                   <span className="text-gray-700 font-medium flex items-center gap-2"><Moon size={16}/> Сон</span>
-                  <span className="font-bold text-primary">{form.sleepHours}ч</span>
+                  <span className="font-bold text-primary text-lg">{form.sleepHours}ч</span>
               </div>
-              <input 
-                type="range" min="0" max="14" step="0.5" 
-                value={form.sleepHours} 
-                onChange={(e) => update('sleepHours', parseFloat(e.target.value))}
-                className="w-full accent-primary h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
+              <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => update('sleepHours', Math.max(0, form.sleepHours - 0.5))}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200"
+                  >
+                      <Minus size={16} />
+                  </button>
+                  <input 
+                    type="range" min="0" max="14" step="0.5" 
+                    value={form.sleepHours} 
+                    onChange={(e) => update('sleepHours', parseFloat(e.target.value))}
+                    className="flex-1 accent-primary h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <button 
+                    onClick={() => update('sleepHours', Math.min(14, form.sleepHours + 0.5))}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200"
+                  >
+                      <Plus size={16} />
+                  </button>
+              </div>
           </div>
 
           {/* Water */}
           <div>
-              <div className="flex justify-between mb-2">
+              <div className="flex justify-between mb-3">
                   <span className="text-gray-700 font-medium flex items-center gap-2"><GlassWater size={16}/> Вода</span>
                   <span className="font-bold text-blue-500">{form.waterGlasses} стаканов</span>
               </div>
@@ -312,8 +355,12 @@ const LogPage: React.FC = () => {
                    {[1,2,3,4,5,6,7,8].map(g => (
                        <div 
                          key={g} 
-                         onClick={() => { haptic.selection(); update('waterGlasses', g); }}
-                         className={`h-8 w-full rounded-md transition-colors ${g <= form.waterGlasses ? 'bg-blue-400' : 'bg-gray-200'}`} 
+                         onClick={() => { 
+                             haptic.selection(); 
+                             // If clicking the current max, decrease by 1. Else set to clicked level.
+                             update('waterGlasses', form.waterGlasses === g ? g - 1 : g); 
+                         }}
+                         className={`h-10 w-full rounded-md transition-all cursor-pointer ${g <= form.waterGlasses ? 'bg-blue-400 shadow-md transform scale-105' : 'bg-gray-100 hover:bg-gray-200'}`} 
                        />
                    ))}
                </div>

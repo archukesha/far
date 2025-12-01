@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { UserSettings, DayLog, CyclePhase, FlowIntensity } from './types';
@@ -10,6 +11,7 @@ import LogPage from './pages/LogPage';
 import InsightsPage from './pages/InsightsPage';
 import AdvicePage from './pages/AdvicePage';
 import OnboardingPage from './pages/OnboardingPage';
+import SettingsPage from './pages/SettingsPage';
 import { FloatingDock } from './components/Components';
 
 // --- Global State ---
@@ -75,21 +77,15 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setLogs(prev => ({ ...prev, [date]: log }));
     
     // Auto-detect new cycle start
-    // Logic: If user logs flow, and it is significantly after the current last period date (e.g. >= 21 days)
-    // We treat this as the start of a new cycle.
     if (log.flow > FlowIntensity.None && settings.lastPeriodDate) {
         const logDate = new Date(date);
         const lastPeriod = new Date(settings.lastPeriodDate);
         const diffTime = logDate.getTime() - lastPeriod.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // Minimum cycle length check (21 days) to avoid resetting on spotting mid-cycle
         if (diffDays >= 21) {
              updateSettings({ lastPeriodDate: date });
         }
-        // Also update if the user is logging a date BEFORE the current lastPeriodDate (correction scenario)
-        // or if they are just starting out and settings might be stale.
-        // For simplicity, we stick to the forward-moving cycle closure.
     } else if (log.flow > FlowIntensity.None && !settings.lastPeriodDate) {
         // Initial fallback
         updateSettings({ lastPeriodDate: date });
@@ -144,9 +140,12 @@ const Layout = () => {
   }
 
   const getActiveTab = () => {
-    const path = location.pathname.substring(1); // remove /
+    const path = location.pathname.substring(1); 
+    if (path.startsWith('settings')) return 'home'; // Keep home active for settings
     return path || 'home';
   };
+  
+  const showDock = location.pathname !== '/settings';
 
   return (
     <div className="relative min-h-screen bg-[#FDF2F8] text-gray-800 font-sans pb-28">
@@ -159,9 +158,10 @@ const Layout = () => {
           <Route path="/log" element={<LogPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/advice" element={<AdvicePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </div>
-      <FloatingDock activeTab={getActiveTab()} onTabChange={(tab) => navigate(`/${tab}`)} />
+      {showDock && <FloatingDock activeTab={getActiveTab()} onTabChange={(tab) => navigate(`/${tab}`)} />}
     </div>
   );
 };

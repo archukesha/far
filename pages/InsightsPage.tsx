@@ -10,8 +10,6 @@ const InsightsPage: React.FC = () => {
 
   // Mock Data generation if logs are empty for visualization
   const cycleData = useMemo(() => {
-    // In a real app, we parse `logs` to find cycle durations
-    // Here we return mock data for the UI
     return [
         { cycle: 'Янв', length: 28 },
         { cycle: 'Фев', length: 29 },
@@ -25,7 +23,12 @@ const InsightsPage: React.FC = () => {
       // Count moods
       const counts: Record<string, number> = {};
       Object.values(logs).forEach(log => {
-          if (log.mood) counts[log.mood] = (counts[log.mood] || 0) + 1;
+          // Handle new array structure
+          const moodList = log.moods || ((log as any).mood ? [(log as any).mood] : []);
+          
+          moodList.forEach(m => {
+              counts[m] = (counts[m] || 0) + 1;
+          });
       });
       // Fallback mock
       if (Object.keys(counts).length === 0) return [
@@ -33,7 +36,7 @@ const InsightsPage: React.FC = () => {
           { name: 'Sad', value: 2, color: '#93C5FD' },
           { name: 'Irritable', value: 3, color: '#FCA5A5' },
       ];
-      return Object.keys(counts).map(k => ({ name: k, value: counts[k], color: '#DDD' }));
+      return Object.keys(counts).map(k => ({ name: k, value: counts[k], color: '#B9A2E1' }));
   }, [logs]);
 
   return (

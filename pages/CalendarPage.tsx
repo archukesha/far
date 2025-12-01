@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../App';
 import { GlassCard, BottomSheet, Button } from '../components/Components';
-import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, X } from 'lucide-react';
 import { addDays, formatDate, haptic } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { MoodTranslation } from '../types';
@@ -15,11 +15,8 @@ const CalendarPage: React.FC = () => {
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-  // Adjust for Monday start if needed, but standard US Sunday start for now:
-  // Let's stick to standard 0-6 (Sun-Sat) for simplicity or adapt UI.
-  // Russian calendars usually start Monday. Let's keep it simple (Sun start) but translate headers S M T...
 
-  // Prediction Logic for Calendar Visualization
+  // Prediction Logic
   const getDayStatus = (day: number) => {
     const dateStr = formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
     const log = logs[dateStr];
@@ -28,7 +25,7 @@ const CalendarPage: React.FC = () => {
     if (log && log.flow > 0) return { type: 'period', intensity: log.flow };
     if (log) return { type: 'logged', intensity: 0 };
 
-    // Simple Prediction Mock (Ideally use same logic as utils/calculateCyclePhase but iterated)
+    // Prediction
     if (!settings.lastPeriodDate) return null;
     
     const lastPeriod = new Date(settings.lastPeriodDate);
@@ -36,26 +33,16 @@ const CalendarPage: React.FC = () => {
     const diffTime = thisDate.getTime() - lastPeriod.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    // Check if date is in the future relative to last period
     if (diffDays > 0) {
         const cycleDay = (diffDays % settings.avgCycleLength) + 1;
-        
-        // Menstruation Prediction
         if (cycleDay <= settings.avgPeriodLength) return { type: 'predicted-period' };
-        
-        // Fertile Window (approx days 10-17)
         if (cycleDay >= 10 && cycleDay <= 17) {
-             if (cycleDay === 14) return { type: 'ovulation' }; // Peak
+             if (cycleDay === 14) return { type: 'ovulation' };
              return { type: 'fertile' };
         }
-        
-        // Luteal Phase (Post ovulation)
         if (cycleDay > 17) return { type: 'luteal' };
-        
-        // Follicular (Pre fertile)
         if (cycleDay > settings.avgPeriodLength && cycleDay < 10) return { type: 'follicular' };
     }
-    
     return null;
   };
 
@@ -69,6 +56,11 @@ const CalendarPage: React.FC = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
+  const handleToday = () => {
+      haptic.impact('light');
+      setCurrentDate(new Date());
+  }
+
   const handleDateClick = (day: number) => {
     haptic.impact('light');
     setSelectedDate(formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)));
@@ -76,32 +68,22 @@ const CalendarPage: React.FC = () => {
 
   const renderDays = () => {
     const days = [];
-    // Empty slots for previous month
     for (let i = 0; i < firstDayOfMonth; i++) {
       days.push(<div key={`empty-${i}`} className="h-10" />);
     }
-    // Days
     for (let i = 1; i <= daysInMonth; i++) {
         const status = getDayStatus(i);
         let className = "h-10 w-10 flex items-center justify-center rounded-full text-sm font-medium relative transition-all ";
         
-        // Solid Fill = Menstruation (Actual)
         if (status?.type === 'period') className += "bg-rose-500 text-white shadow-md shadow-rose-200";
-        // Outline = Predicted Period
         else if (status?.type === 'predicted-period') className += "border-2 border-rose-300 text-rose-500 border-dashed bg-rose-50";
-        // Ovulation
         else if (status?.type === 'ovulation') className += "bg-purple-200 text-purple-800 border-2 border-purple-400 font-bold";
-        // Fertile
         else if (status?.type === 'fertile') className += "bg-purple-100 text-purple-700 border border-purple-200";
-        // Phases Backgrounds (Subtle)
         else if (status?.type === 'luteal') className += "bg-yellow-50/50 text-gray-600";
         else if (status?.type === 'follicular') className += "bg-blue-50/50 text-gray-600";
-        // Logged but no period
         else if (status?.type === 'logged') className += "bg-gray-200 text-gray-700";
-        // Default
         else className += "text-gray-700 hover:bg-white/50";
 
-        // Today indicator
         const isToday = formatDate(new Date()) === formatDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), i));
         if (isToday) {
             className += " ring-2 ring-offset-1 ring-primary";
@@ -119,11 +101,26 @@ const CalendarPage: React.FC = () => {
     return days;
   };
 
+  // Helper to extract moods safely
+  const getMoods = (date: string) => {
+      const log = logs[date];
+      if (!log) return [];
+      if (log.moods) return log.moods;
+      // Backward compatibility
+      if ((log as any).mood) return [(log as any).mood];
+      return [];
+  }
+
   return (
     <div className="pt-6 pb-20">
       <div className="flex justify-between items-center mb-6 px-2">
         <button onClick={handlePrevMonth} className="p-2 bg-white/50 rounded-full"><ChevronLeft /></button>
-        <h2 className="text-xl font-bold text-gray-800 capitalize">{currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</h2>
+        <div className="flex flex-col items-center" onClick={handleToday}>
+            <h2 className="text-xl font-bold text-gray-800 capitalize leading-none">{currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</h2>
+            {currentDate.getMonth() !== new Date().getMonth() && (
+                <span className="text-xs text-primary font-semibold mt-1">Вернуться к сегодня</span>
+            )}
+        </div>
         <button onClick={handleNextMonth} className="p-2 bg-white/50 rounded-full"><ChevronRight /></button>
       </div>
 
@@ -147,20 +144,37 @@ const CalendarPage: React.FC = () => {
       <BottomSheet isOpen={!!selectedDate} onClose={() => setSelectedDate(null)} title={selectedDate ? new Date(selectedDate).toLocaleDateString('ru-RU', { month: 'long', day: 'numeric', weekday: 'long' }) : ''}>
          {selectedDate && (
              <div className="space-y-4">
+                 <button 
+                    onClick={() => setSelectedDate(null)} 
+                    className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full text-gray-500"
+                 >
+                     <X size={16} />
+                 </button>
+
                  {logs[selectedDate] ? (
-                     <div className="space-y-2">
+                     <div className="space-y-3">
                          <div className="flex flex-wrap gap-2">
                              {logs[selectedDate].flow > 0 && <span className="px-3 py-1 bg-rose-100 text-rose-600 rounded-lg text-sm font-medium">Кровотечение: {logs[selectedDate].flow}</span>}
-                             {logs[selectedDate].mood && <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium">{MoodTranslation[logs[selectedDate].mood || ''] || logs[selectedDate].mood}</span>}
+                             {getMoods(selectedDate).map(m => (
+                                 <span key={m} className="px-3 py-1 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium">{MoodTranslation[m] || m}</span>
+                             ))}
                              {logs[selectedDate].sex && <span className="px-3 py-1 bg-pink-100 text-pink-600 rounded-lg text-sm font-medium">Секс</span>}
                          </div>
-                         <p className="text-gray-600 italic">"{logs[selectedDate].notes || 'Нет заметок'}"</p>
+                         {logs[selectedDate].symptoms?.length > 0 && (
+                             <div className="flex flex-wrap gap-1">
+                                 {logs[selectedDate].symptoms.map(s => (
+                                     <span key={s} className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-xs">{s}</span>
+                                 ))}
+                             </div>
+                         )}
+                         <div className="p-3 bg-gray-50 rounded-xl">
+                            <p className="text-gray-600 italic text-sm">"{logs[selectedDate].notes || 'Нет заметок'}"</p>
+                         </div>
                      </div>
                  ) : (
                      <p className="text-gray-500 text-center py-4">Нет данных за этот день.</p>
                  )}
                  <Button onClick={() => {
-                     // Pass date via nav state or url query
                      navigate(`/log?date=${selectedDate}`);
                  }}>
                     <Edit2 size={18} /> Редактировать

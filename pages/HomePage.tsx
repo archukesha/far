@@ -4,7 +4,7 @@ import { useApp } from '../App';
 import CycleRing from '../components/CycleRing';
 import { GlassCard, Button } from '../components/Components';
 import { predictNextPeriod, predictOvulation, haptic, formatDate } from '../utils';
-import { Droplet, ThermometerSun, ChevronRight, Activity } from 'lucide-react';
+import { Droplet, ThermometerSun, ChevronRight, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PhaseTranslation, MoodTranslation } from '../types';
 
@@ -28,8 +28,16 @@ const HomePage: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-800">Привет, {settings.name || 'Красотка'}</h1>
             <p className="text-sm text-gray-500 capitalize">{new Date().toLocaleDateString('ru-RU', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-bold ${phaseBg} ${phaseColor}`}>
-            {translatedPhase}
+        <div className="flex items-center gap-3">
+             <div className={`px-3 py-1 rounded-full text-xs font-bold ${phaseBg} ${phaseColor}`}>
+                {translatedPhase}
+            </div>
+            <button 
+                onClick={() => navigate('/settings')}
+                className="p-2 bg-white/50 rounded-full hover:bg-white text-gray-500"
+            >
+                <Settings size={20} />
+            </button>
         </div>
       </div>
 
@@ -58,7 +66,7 @@ const HomePage: React.FC = () => {
             <h3 className="font-bold text-gray-800">Как самочувствие?</h3>
             <button onClick={() => navigate('/log')} className="text-primary text-sm font-semibold">В дневник</button>
         </div>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             {['Happy', 'Calm', 'Energetic', 'Irritable'].map((mood) => (
                 <button 
                     key={mood}
@@ -66,7 +74,7 @@ const HomePage: React.FC = () => {
                         haptic.selection();
                         navigate('/log');
                     }}
-                    className="flex-shrink-0 px-4 py-2 bg-white/50 border border-white rounded-full text-sm text-gray-700 font-medium hover:bg-primary hover:text-white transition-colors"
+                    className="flex-shrink-0 px-4 py-2 bg-white/50 border border-white rounded-full text-sm text-gray-700 font-medium hover:bg-primary hover:text-white transition-colors whitespace-nowrap"
                 >
                     {MoodTranslation[mood] || mood}
                 </button>
