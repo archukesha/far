@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../App';
 import { Button, GlassCard } from '../components/Components';
@@ -21,7 +22,6 @@ const OnboardingPage: React.FC = () => {
   
   // UI State
   const [showErrors, setShowErrors] = useState(false);
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Validation Logic
   const getStepError = (): string | null => {
@@ -82,23 +82,6 @@ const OnboardingPage: React.FC = () => {
       haptic.impact('light');
       setShowErrors(false);
       if (step > 1) setStep(s => s - 1);
-  };
-
-  const triggerDatePicker = () => {
-    // Explicitly show picker to ensure desktop interaction works
-    const input = dateInputRef.current;
-    if (input) {
-        try {
-            if (typeof (input as any).showPicker === 'function') {
-                (input as any).showPicker();
-            } else {
-                input.focus();
-                input.click();
-            }
-        } catch (e) {
-            console.warn("Date picker open failed", e);
-        }
-    }
   };
 
   // Telegram Integration
@@ -219,24 +202,20 @@ const OnboardingPage: React.FC = () => {
                     <p className="text-gray-500 mt-2">Первый день последнего цикла.</p>
                 </div>
                 
-                {/* Custom Date Picker Trigger */}
-                <div 
-                    className="relative cursor-pointer group"
-                    onClick={triggerDatePicker}
-                >
+                {/* 使用 Label 包装 input 和 visual UI，以确保点击任何位置都会触发 input */}
+                <label className="relative cursor-pointer group block">
                     <GlassCard className={`p-8 flex flex-col items-center justify-center gap-3 transition-colors group-active:scale-[0.98] ${showErrors && !lastPeriod ? 'ring-2 ring-red-200' : ''}`}>
                         <Calendar size={32} className="text-primary mb-1" />
                         <span className={`text-xl font-bold ${lastPeriod ? 'text-gray-800' : 'text-gray-400'}`}>
                             {formattedDate}
                         </span>
                         <div className="bg-white/50 px-3 py-1 rounded-full text-xs text-primary font-medium">
-                            Нажмите, чтобы изменить
+                            Нажмите, чтобы выбрать
                         </div>
                     </GlassCard>
                     
                     {/* Invisible Input Overlay - Ensures click works everywhere */}
                     <input
-                        ref={dateInputRef}
                         type="date"
                         value={lastPeriod}
                         max={new Date().toISOString().split('T')[0]}
@@ -244,9 +223,24 @@ const OnboardingPage: React.FC = () => {
                             setLastPeriod(e.target.value);
                             setShowErrors(false);
                         }}
+                        onClick={(e) => {
+                            // Force picker on desktop/mobile
+                            try {
+                                if (typeof e.currentTarget.showPicker === 'function') {
+                                    e.currentTarget.showPicker();
+                                }
+                            } catch {}
+                        }}
+                        onFocus={(e) => {
+                             try {
+                                if (typeof e.currentTarget.showPicker === 'function') {
+                                    e.currentTarget.showPicker();
+                                }
+                            } catch {}
+                        }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                     />
-                </div>
+                </label>
                 
                 {showErrors && isFutureDate(lastPeriod) && (
                     <p className="text-center text-red-500 text-sm">Дата не может быть в будущем</p>
@@ -360,17 +354,19 @@ const OnboardingPage: React.FC = () => {
 
       {/* Manual Navigation (Non-Telegram) */}
       {!window.Telegram?.WebApp?.initData && (
-          <div className="mt-8 flex justify-between gap-4">
-              <Button 
-                variant="ghost" 
-                onClick={handleBack} 
-                className={`w-1/3 ${step === 1 ? 'invisible' : 'visible'}`}
-              >
-                  Назад
-              </Button>
+          <div className="mt-8 flex gap-4 w-full">
+              {step > 1 && (
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleBack} 
+                    className="flex-1"
+                  >
+                      Назад
+                  </Button>
+              )}
               <Button 
                 onClick={handleNext} 
-                className={`w-1/2 ${!isStepValid && showErrors ? 'bg-gray-400' : ''}`}
+                className={`flex-[2] ${!isStepValid && showErrors ? 'bg-gray-400' : ''}`}
               >
                   {step === totalSteps ? "Готово" : "Далее"}
               </Button>

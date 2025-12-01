@@ -60,14 +60,14 @@ export interface DayLog {
   flow: FlowIntensity;
   bleedingColor?: BleedingColor;
   bleedingClots?: boolean;
-  moods: Mood[]; // Changed from optional single mood to array
-  symptoms: string[]; // e.g., "Спазмы", "Головная боль"
-  painLevel?: number; // 0-10
-  painLocations?: string[]; // e.g. "Back", "Breasts"
+  moods: Mood[]; 
+  symptoms: string[]; // Flat list of all symptoms
+  painLevel: number; // 0-10
+  painLocations: string[]; // e.g. "Head", "Back", "Breasts"
   sleepHours: number;
   waterGlasses: number;
-  sex: SexType; // Updated from boolean
-  libido?: 'Low' | 'Medium' | 'High';
+  sex: SexType;
+  sexDetails?: string[]; // e.g. "Libido High", "Discomfort"
   energy?: 'Low' | 'Medium' | 'High';
   stress?: 'Low' | 'Medium' | 'High';
   discharge?: DischargeType;
@@ -75,6 +75,8 @@ export interface DayLog {
   weight?: number;
   notes: string;
   contraceptiveTaken?: boolean;
+  medications?: string[]; // e.g. "Magnesium", "Painkillers"
+  nutrition?: string[]; // e.g. "Sweets", "Alcohol"
 }
 
 export type UserGoal = 'track' | 'conceive' | 'avoid' | 'pregnancy' | 'postpartum' | 'menopause';
@@ -109,4 +111,46 @@ export const PhaseTranslation: Record<string, string> = {
     'Menopause': 'Менопауза'
 };
 
-export const SYMPTOMS_LIST = ['Спазмы', 'Головная боль', 'Вздутие', 'Акне', 'Боль в спине', 'Тяга к еде', 'Тошнота', 'Головокружение'];
+// Organized Categories for UI
+export const SYMPTOM_CATEGORIES = {
+    General: ['Спазмы', 'Головная боль', 'Головокружение', 'Отеки'],
+    GI: ['Вздутие', 'Тошнота', 'Тяга к сладкому', 'Аппетит++', 'Диарея', 'Запор'],
+    Skin: ['Акне', 'Жирная кожа', 'Сухость', 'Выпадение волос'],
+    Breasts: ['Чувствительность', 'Боль в груди', 'Увеличение']
+};
+
+export const MEDS_LIST = ['Обезболивающее (НПВС)', 'Магний', 'Железо', 'Витамины', 'Мелатонин'];
+export const NUTRITION_LIST = ['Сладкое', 'Фастфуд', 'Алкоголь', 'Кофеин', 'Белок++', 'Овощи++'];
+export const SEX_DETAILS_LIST = ['Высокое либидо', 'Низкое либидо', 'Дискомфорт', 'Использовали смазку', 'Оргазм'];
+export const PAIN_LOCATIONS = ['Низ живота', 'Поясница', 'Голова', 'Грудь', 'Ноги'];
+
+export const SYMPTOMS_LIST = [
+    ...SYMPTOM_CATEGORIES.General,
+    ...SYMPTOM_CATEGORIES.GI,
+    ...SYMPTOM_CATEGORIES.Skin,
+    ...SYMPTOM_CATEGORIES.Breasts
+];
+
+// --- Analytics Types ---
+
+export interface CycleHistoryItem {
+    startDate: string;
+    endDate: string;
+    length: number;
+    periodLength: number;
+}
+
+export type AnomalyType = 'ShortCycle' | 'LongCycle' | 'Irregular' | 'Spotting' | 'HighPain';
+
+export interface CycleAnalysis {
+    history: CycleHistoryItem[];
+    avgLength: number;
+    avgPeriod: number;
+    variability: number; // Standard Deviation in days
+    predictionConfidence: 'High' | 'Medium' | 'Low';
+    anomalies: { type: AnomalyType; date?: string; details: string }[];
+    correlations: {
+        sleepEffect: string; 
+        stressEffect: string;
+    };
+}

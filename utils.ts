@@ -1,5 +1,5 @@
 
-import { CyclePhase, UserSettings, DayLog } from './types';
+import { CyclePhase, UserSettings, DayLog, CycleAnalysis, CycleHistoryItem, AnomalyType, FlowIntensity, Mood } from './types';
 
 // --- Date Helpers ---
 
@@ -101,6 +101,125 @@ export const predictOvulation = (nextPeriod: string): string => {
   const date = new Date(nextPeriod);
   date.setDate(date.getDate() - 14);
   return formatDate(date);
+};
+
+// --- Smart Analytics Engine ---
+
+export const analyzeCycles = (logs: Record<string, DayLog>, settings: UserSettings): CycleAnalysis => {
+    const dates = Object.keys(logs).sort();
+    const history: CycleHistoryItem[] = [];
+    const anomalies: CycleAnalysis['anomalies'] = [];
+    
+    // 1. Reconstruct Cycles
+    // Identify sequences of Flow > 0 separated by at least 10 days of no flow
+    let currentCycleStart: string | null = null;
+    let currentPeriodDays = 0;
+    
+    // Helper to check if date2 is next day of date1
+    const isNextDay = (d1: string, d2: string) => getDayDiff(d1, d2) === 1;
+
+    // Scan for period starts
+    for (let i = 0; i < dates.length; i++) {
+        const date = dates[i];
+        const log = logs[date];
+        
+        if (log.flow > FlowIntensity.None) {
+            // Check if this is a NEW period
+            const prevDate = new Date(date);
+            prevDate.setDate(prevDate.getDate() - 1);
+            const prevDateStr = formatDate(prevDate);
+            const prevLog = logs[prevDateStr];
+
+            // It's a start if no flow yesterday OR gap is huge
+            if (!prevLog || prevLog.flow === FlowIntensity.None) {
+                // If we have a previous cycle pending, close it
+                if (currentCycleStart) {
+                    const length = getDayDiff(currentCycleStart, date);
+                    // Filter out short bleeding episodes (spotting) < 14 days apart
+                    if (length > 14) {
+                        history.push({
+                            startDate: currentCycleStart,
+                            endDate: date, // The start of the NEXT is the end marker
+                            length: length,
+                            periodLength: currentPeriodDays // Approx
+                        });
+                    } else {
+                        // This might be spotting in the middle of a cycle
+                        anomalies.push({ type: 'Spotting', date: currentCycleStart, details: 'Межменструальное кровотечение' });
+                    }
+                }
+                currentCycleStart = date;
+                currentPeriodDays = 1;
+            } else {
+                // Continuation of period
+                currentPeriodDays++;
+            }
+        }
+    }
+
+    // 2. Statistics
+    let avgLength = settings.avgCycleLength;
+    let avgPeriod = settings.avgPeriodLength;
+    let variability = 0;
+
+    if (history.length > 0) {
+        const totalLen = history.reduce((sum, item) => sum + item.length, 0);
+        avgLength = Math.round(totalLen / history.length);
+        
+        const totalPeriod = history.reduce((sum, item) => sum + item.periodLength, 0);
+        avgPeriod = Math.round(totalPeriod / history.length);
+
+        // Standard Deviation
+        const variance = history.reduce((sum, item) => sum + Math.pow(item.length - avgLength, 2), 0) / history.length;
+        variability = Math.sqrt(variance);
+    }
+
+    // 3. Prediction Confidence
+    let predictionConfidence: 'High' | 'Medium' | 'Low' = 'High';
+    if (variability > 5) predictionConfidence = 'Low';
+    else if (variability > 2.5) predictionConfidence = 'Medium';
+    if (history.length < 2) predictionConfidence = 'Low'; // Not enough data
+
+    // 4. Anomaly Detection
+    if (avgLength < 21) anomalies.push({ type: 'ShortCycle', details: 'Цикл короче 21 дня' });
+    if (avgLength > 35) anomalies.push({ type: 'LongCycle', details: 'Цикл длиннее 35 дней' });
+    if (variability > 7) anomalies.push({ type: 'Irregular', details: 'Высокая вариабельность цикла' });
+
+    // 5. Correlations (Simple)
+    // Example: Avg Mood score when Sleep < 7 vs Sleep >= 7
+    let badSleepMoodBad = 0;
+    let goodSleepMoodBad = 0;
+    let badSleepCount = 0;
+    let goodSleepCount = 0;
+
+    dates.forEach(d => {
+        const l = logs[d];
+        const isBadMood = (l.moods?.includes(Mood.Irritable) || l.moods?.includes(Mood.Sad) || l.moods?.includes(Mood.Anxious) || l.moods?.includes(Mood.Depressed));
+        if (l.sleepHours < 7) {
+            badSleepCount++;
+            if (isBadMood) badSleepMoodBad++;
+        } else {
+            goodSleepCount++;
+            if (isBadMood) goodSleepMoodBad++;
+        }
+    });
+
+    const sleepEffect = (badSleepCount > 5 && (badSleepMoodBad/badSleepCount > goodSleepMoodBad/Math.max(1, goodSleepCount)))
+        ? "Недосып ухудшает настроение" 
+        : "Связь сна и настроения в норме";
+
+    return {
+        history: history.reverse(), // Newest first
+        avgLength,
+        avgPeriod,
+        variability,
+        predictionConfidence,
+        anomalies,
+        correlations: {
+            sleepEffect,
+            stressEffect: "Стресс влияет на либидо" // Placeholder logic
+        }
+    };
 };
 
 // --- Haptics (Telegram Wrapper) ---

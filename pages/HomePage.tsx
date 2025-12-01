@@ -1,15 +1,15 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../App';
 import CycleRing from '../components/CycleRing';
 import { GlassCard } from '../components/Components';
-import { predictNextPeriod, predictOvulation, haptic, formatDate } from '../utils';
-import { Droplet, ThermometerSun, ChevronRight, Settings } from 'lucide-react';
+import { predictNextPeriod, predictOvulation, haptic, formatDate, analyzeCycles } from '../utils';
+import { Droplet, ThermometerSun, ChevronRight, Settings, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PhaseTranslation, MoodTranslation } from '../types';
 
 const HomePage: React.FC = () => {
-  const { settings, cyclePhase } = useApp();
+  const { settings, cyclePhase, logs } = useApp();
   const navigate = useNavigate();
 
   const nextPeriodDate = predictNextPeriod(settings.lastPeriodDate || formatDate(new Date()), settings.avgCycleLength);
@@ -19,6 +19,10 @@ const HomePage: React.FC = () => {
   const phaseBg = cyclePhase.phase === 'Menstruation' ? 'bg-rose-100' : 'bg-purple-100';
 
   const translatedPhase = PhaseTranslation[cyclePhase.phase] || cyclePhase.phase;
+  
+  // Calculate Confidence
+  const analysis = useMemo(() => analyzeCycles(logs, settings), [logs, settings]);
+  const confidenceColor = analysis.predictionConfidence === 'High' ? 'text-green-500' : analysis.predictionConfidence === 'Medium' ? 'text-yellow-500' : 'text-gray-400';
 
   return (
     <div className="flex flex-col gap-6 pt-4">
@@ -45,16 +49,19 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Cycle Ring */}
-      <div className="flex justify-center py-2">
+      <div className="flex justify-center py-2 relative">
         <CycleRing settings={settings} currentDayInCycle={cyclePhase.dayInCycle} />
       </div>
 
       {/* Predictions Row */}
       <div className="grid grid-cols-2 gap-4">
-        <GlassCard className="p-4 flex flex-col items-center justify-center text-center">
+        <GlassCard className="p-4 flex flex-col items-center justify-center text-center relative overflow-hidden">
             <Droplet className="text-rose-400 mb-2" size={24} />
             <span className="text-xs text-gray-500 uppercase font-semibold">Месячные</span>
             <span className="text-lg font-bold text-gray-800">{new Date(nextPeriodDate).toLocaleDateString('ru-RU', { month: 'short', day: 'numeric'})}</span>
+            <div className={`absolute bottom-2 right-2 text-[10px] font-bold flex items-center gap-0.5 ${confidenceColor} opacity-70`}>
+                <Sparkles size={8} /> {analysis.predictionConfidence === 'High' ? '90%' : analysis.predictionConfidence === 'Medium' ? '70%' : '~50%'}
+            </div>
         </GlassCard>
         <GlassCard className="p-4 flex flex-col items-center justify-center text-center">
             <ThermometerSun className="text-purple-400 mb-2" size={24} />
@@ -80,7 +87,7 @@ const HomePage: React.FC = () => {
                         haptic.selection();
                         navigate(`/log?mood=${mood}`);
                     }}
-                    className="flex-shrink-0 min-w-fit px-5 py-2.5 bg-white/60 border border-white rounded-full text-xs font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors shadow-sm whitespace-nowrap"
+                    className="flex-shrink-0 min-w-max w-auto px-5 py-2.5 bg-white/60 border border-white rounded-full text-xs font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors shadow-sm whitespace-nowrap"
                 >
                     {MoodTranslation[mood] || mood}
                 </button>
