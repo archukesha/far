@@ -53,6 +53,8 @@ export const DischargeTranslation: Record<string, string> = {
   'Unusual': 'Необычные',
 };
 
+export type SexType = 'None' | 'Protected' | 'Unprotected';
+
 export interface DayLog {
   date: string; // ISO YYYY-MM-DD
   flow: FlowIntensity;
@@ -64,7 +66,7 @@ export interface DayLog {
   painLocations?: string[]; // e.g. "Back", "Breasts"
   sleepHours: number;
   waterGlasses: number;
-  sex: boolean;
+  sex: SexType; // Updated from boolean
   libido?: 'Low' | 'Medium' | 'High';
   energy?: 'Low' | 'Medium' | 'High';
   stress?: 'Low' | 'Medium' | 'High';

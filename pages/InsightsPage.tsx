@@ -4,9 +4,11 @@ import { useApp } from '../App';
 import { GlassCard } from '../components/Components';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { MoodTranslation } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 const InsightsPage: React.FC = () => {
   const { logs, settings } = useApp();
+  const navigate = useNavigate();
 
   // Mock Data generation if logs are empty for visualization
   const cycleData = useMemo(() => {
@@ -87,9 +89,12 @@ const InsightsPage: React.FC = () => {
 
           {/* Paywall Overlay */}
           {!settings.isPro && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/20">
-                  <p className="font-bold text-gray-800 mb-2">Открыть полную аналитику</p>
-                  <button className="bg-gradient-to-r from-primary to-purple-500 text-white px-6 py-2 rounded-full font-semibold shadow-lg transform active:scale-95 transition-transform">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px]">
+                  <p className="font-bold text-gray-800 mb-2 drop-shadow-sm">Открыть полную аналитику</p>
+                  <button 
+                    onClick={() => navigate('/settings')}
+                    className="bg-gradient-to-r from-primary to-purple-500 text-white px-6 py-2 rounded-full font-semibold shadow-lg transform active:scale-95 transition-transform"
+                  >
                       Купить PRO
                   </button>
               </div>

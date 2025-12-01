@@ -4,7 +4,7 @@ import { useApp } from '../App';
 import { GlassCard, Button } from '../components/Components';
 import { haptic } from '../utils';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Crown, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Crown, CheckCircle2, Star } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {
   const { settings, updateSettings, resetData } = useApp();
@@ -90,24 +90,36 @@ const SettingsPage: React.FC = () => {
                   {settings.isPro && <span className="bg-white/10 backdrop-blur border border-white/20 px-3 py-1 rounded-full text-xs font-bold text-yellow-300">АКТИВЕН</span>}
               </div>
 
-              <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-3">
-                      <CheckCircle2 size={18} className="text-yellow-400 flex-shrink-0" />
-                      <span className="text-sm text-gray-200">Безлимитный доступ к статьям</span>
+              <div className="space-y-4 mb-8">
+                  <div className="flex items-start gap-3">
+                      <Star size={18} className="text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                          <p className="text-sm font-semibold text-gray-100">Умная аналитика</p>
+                          <p className="text-xs text-gray-400">Графики настроения и корреляции симптомов</p>
+                      </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                      <CheckCircle2 size={18} className="text-yellow-400 flex-shrink-0" />
-                      <span className="text-sm text-gray-200">Расширенная аналитика настроения</span>
+                  <div className="flex items-start gap-3">
+                      <CheckCircle2 size={18} className="text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                          <p className="text-sm font-semibold text-gray-100">Полный доступ к советам</p>
+                          <p className="text-xs text-gray-400">Эксклюзивные статьи от врачей и экспертов</p>
+                      </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                      <CheckCircle2 size={18} className="text-yellow-400 flex-shrink-0" />
-                      <span className="text-sm text-gray-200">Умные уведомления</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                      <CheckCircle2 size={18} className="text-yellow-400 flex-shrink-0" />
-                      <span className="text-sm text-gray-200">PDF экспорт для врача</span>
+                  <div className="flex items-start gap-3">
+                      <CheckCircle2 size={18} className="text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                          <p className="text-sm font-semibold text-gray-100">Персональные рекомендации</p>
+                          <p className="text-xs text-gray-400">Советы по питанию и спорту для каждой фазы</p>
+                      </div>
                   </div>
               </div>
+
+              {!settings.isPro && (
+                  <div className="mb-4 text-center">
+                      <span className="text-2xl font-bold text-white">199₽</span>
+                      <span className="text-gray-400 text-sm"> / месяц</span>
+                  </div>
+              )}
 
               <button 
                 onClick={() => {
@@ -116,9 +128,9 @@ const SettingsPage: React.FC = () => {
                 }}
                 className={`w-full py-3.5 font-bold rounded-xl transition-all active:scale-95 ${settings.isPro ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 shadow-lg shadow-yellow-500/30'}`}
               >
-                  {settings.isPro ? 'Отключить PRO (Demo)' : 'Подключить PRO (Demo)'}
+                  {settings.isPro ? 'Отключить подписку' : 'Оформить подписку'}
               </button>
-              {!settings.isPro && <p className="text-center text-xs text-gray-500 mt-3">7 дней бесплатно, затем 199₽/мес</p>}
+              {!settings.isPro && <p className="text-center text-xs text-gray-500 mt-3">7 дней бесплатно для новых пользователей</p>}
           </div>
       </GlassCard>
 

@@ -65,19 +65,22 @@ const HomePage: React.FC = () => {
 
       {/* Quick Log Teaser */}
       <GlassCard className="p-5">
-        <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-gray-800">Как самочувствие?</h3>
+        <div className="flex justify-between items-center mb-3">
+            <div>
+                <h3 className="font-bold text-gray-800">Как самочувствие?</h3>
+                <p className="text-[10px] text-primary font-medium mt-0.5">Можно выбрать несколько</p>
+            </div>
             <button onClick={() => navigate('/log')} className="text-primary text-sm font-semibold">В дневник</button>
         </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {['Happy', 'Calm', 'Energetic', 'Irritable'].map((mood) => (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+            {['Happy', 'Calm', 'Energetic', 'Irritable', 'Sad', 'Anxious'].map((mood) => (
                 <button 
                     key={mood}
                     onClick={() => {
                         haptic.selection();
                         navigate(`/log?mood=${mood}`);
                     }}
-                    className="flex-shrink-0 px-4 py-2 bg-white/50 border border-white rounded-full text-xs sm:text-sm text-gray-700 font-medium hover:bg-primary hover:text-white transition-colors whitespace-nowrap shadow-sm"
+                    className="flex-shrink-0 px-4 py-2.5 bg-white/60 border border-white rounded-full text-xs font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors shadow-sm whitespace-nowrap"
                 >
                     {MoodTranslation[mood] || mood}
                 </button>
@@ -91,7 +94,7 @@ const HomePage: React.FC = () => {
             <h3 className="font-bold text-gray-800 text-lg">Совет дня</h3>
             <ChevronRight size={20} className="text-gray-400" />
         </div>
-        <GlassCard className="p-0 overflow-hidden" onClick={() => navigate('/advice')}>
+        <GlassCard className="p-0 overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate('/advice')}>
              <div className="h-32 bg-gradient-to-r from-indigo-300 to-purple-400 relative">
                 <div className="absolute inset-0 bg-black/10" />
                 <div className="absolute bottom-4 left-4 text-white">

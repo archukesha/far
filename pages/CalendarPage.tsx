@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../App';
 import { GlassCard, BottomSheet, Button } from '../components/Components';
-import { ChevronLeft, ChevronRight, Edit2, X, Calendar as CalIcon, Droplet } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit2, X, Calendar as CalIcon, Droplet, ChevronDown, Heart, Shield, ShieldAlert } from 'lucide-react';
 import { formatDate, haptic } from '../utils';
 import { useNavigate } from 'react-router-dom';
 import { MoodTranslation } from '../types';
@@ -70,9 +70,6 @@ const CalendarPage: React.FC = () => {
   const renderDays = () => {
     const days = [];
     const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-    // Shift days if week starts on Monday (Optional Russian locale logic, but standard JS starts Sunday)
-    // Let's stick to standard JS for now to avoid complexity, but usually RU cal starts Monday.
-    // Standard JS getDay(): 0 = Sun. 
     
     // Empty cells
     for (let i = 0; i < firstDayOfMonth; i++) {
@@ -119,19 +116,32 @@ const CalendarPage: React.FC = () => {
       return [];
   }
 
+  // Safe sex checker
+  const getSexLabel = (date: string) => {
+      const log = logs[date];
+      if (!log) return null;
+      if (log.sex === 'Protected') return { label: 'Защищенный', color: 'bg-green-100 text-green-700', icon: Shield };
+      if (log.sex === 'Unprotected') return { label: 'Без защиты', color: 'bg-rose-100 text-rose-700', icon: ShieldAlert };
+      if (log.sex === true as any) return { label: 'Секс', color: 'bg-pink-100 text-pink-600', icon: Heart }; // legacy
+      return null;
+  }
+
   return (
     <div className="pt-6 pb-20">
       
       {/* Header with Year Selector */}
-      <div className="flex justify-between items-center mb-6 px-4">
+      <div className="flex justify-between items-center mb-6 px-4 relative z-20">
         <button onClick={handlePrevMonth} className="p-2 bg-white/50 rounded-full shadow-sm active:scale-95 transition-transform"><ChevronLeft size={20}/></button>
         
         <div className="flex flex-col items-center cursor-pointer" onClick={() => setShowYearPicker(!showYearPicker)}>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 group bg-white/30 px-3 py-1 rounded-full border border-white/40">
                 <h2 className="text-xl font-bold text-gray-800 capitalize leading-none">
                     {currentDate.toLocaleDateString('ru-RU', { month: 'long' })}
                 </h2>
-                <span className="text-lg font-light text-gray-500">{currentDate.getFullYear()}</span>
+                <span className="text-lg font-light text-gray-600 flex items-center ml-1">
+                    {currentDate.getFullYear()}
+                    <ChevronDown size={14} className={`ml-1 transition-transform ${showYearPicker ? 'rotate-180' : ''}`} />
+                </span>
             </div>
             {currentDate.getMonth() !== new Date().getMonth() && (
                 <span className="text-xs text-primary font-semibold mt-1" onClick={(e) => {
@@ -147,10 +157,13 @@ const CalendarPage: React.FC = () => {
       </div>
 
       {showYearPicker && (
-          <GlassCard className="mb-4 mx-4 p-4 flex justify-between items-center animate-in slide-in-from-top-4">
-              <button onClick={() => changeYear(-1)} className="p-2 bg-gray-100 rounded-lg"><ChevronLeft size={16}/></button>
-              <span className="font-bold text-lg">{currentDate.getFullYear()}</span>
-              <button onClick={() => changeYear(1)} className="p-2 bg-gray-100 rounded-lg"><ChevronRight size={16}/></button>
+          <GlassCard className="mb-4 mx-4 p-4 flex justify-between items-center animate-in slide-in-from-top-4 border-2 border-primary/20">
+              <button onClick={() => changeYear(-1)} className="p-3 bg-white shadow-sm rounded-xl text-primary"><ChevronLeft size={20}/></button>
+              <div className="flex flex-col items-center">
+                  <span className="text-xs text-gray-500 uppercase tracking-widest font-bold">Год</span>
+                  <span className="font-bold text-3xl text-gray-800">{currentDate.getFullYear()}</span>
+              </div>
+              <button onClick={() => changeYear(1)} className="p-3 bg-white shadow-sm rounded-xl text-primary"><ChevronRight size={20}/></button>
           </GlassCard>
       )}
 
@@ -173,11 +186,11 @@ const CalendarPage: React.FC = () => {
       {/* Details Bottom Sheet */}
       <BottomSheet isOpen={!!selectedDate} onClose={() => setSelectedDate(null)}>
          {selectedDate && (
-             <div className="relative">
-                 {/* Explicit Close Button */}
+             <div className="relative pt-2">
+                 {/* Explicit Close Button - Positioned INSIDE the container */}
                  <button 
                     onClick={() => setSelectedDate(null)} 
-                    className="absolute top-0 right-0 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors z-20"
+                    className="absolute top-0 right-0 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors z-50 shadow-sm"
                  >
                      <X size={20} />
                  </button>
@@ -194,7 +207,18 @@ const CalendarPage: React.FC = () => {
                              {getMoods(selectedDate).map(m => (
                                  <span key={m} className="px-3 py-1 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium">{MoodTranslation[m] || m}</span>
                              ))}
-                             {logs[selectedDate].sex && <span className="px-3 py-1 bg-pink-100 text-pink-600 rounded-lg text-sm font-medium">Секс</span>}
+                             {(() => {
+                                 const sexInfo = getSexLabel(selectedDate);
+                                 if (sexInfo) {
+                                     const Icon = sexInfo.icon;
+                                     return (
+                                        <span className={`px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-1 ${sexInfo.color}`}>
+                                            <Icon size={12} /> {sexInfo.label}
+                                        </span>
+                                     )
+                                 }
+                                 return null;
+                             })()}
                          </div>
                          
                          {logs[selectedDate].symptoms?.length > 0 && (
