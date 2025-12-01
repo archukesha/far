@@ -2,7 +2,7 @@
 import React from 'react';
 import { useApp } from '../App';
 import CycleRing from '../components/CycleRing';
-import { GlassCard, Button } from '../components/Components';
+import { GlassCard } from '../components/Components';
 import { predictNextPeriod, predictOvulation, haptic, formatDate } from '../utils';
 import { Droplet, ThermometerSun, ChevronRight, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -33,8 +33,11 @@ const HomePage: React.FC = () => {
                 {translatedPhase}
             </div>
             <button 
-                onClick={() => navigate('/settings')}
-                className="p-2 bg-white/50 rounded-full hover:bg-white text-gray-500"
+                onClick={() => {
+                    haptic.impact('light');
+                    navigate('/settings');
+                }}
+                className="p-2 bg-white/50 rounded-full hover:bg-white text-gray-500 transition-colors shadow-sm"
             >
                 <Settings size={20} />
             </button>
@@ -72,9 +75,9 @@ const HomePage: React.FC = () => {
                     key={mood}
                     onClick={() => {
                         haptic.selection();
-                        navigate('/log');
+                        navigate(`/log?mood=${mood}`);
                     }}
-                    className="flex-shrink-0 px-4 py-2 bg-white/50 border border-white rounded-full text-sm text-gray-700 font-medium hover:bg-primary hover:text-white transition-colors whitespace-nowrap"
+                    className="flex-shrink-0 px-4 py-2 bg-white/50 border border-white rounded-full text-xs sm:text-sm text-gray-700 font-medium hover:bg-primary hover:text-white transition-colors whitespace-nowrap shadow-sm"
                 >
                     {MoodTranslation[mood] || mood}
                 </button>

@@ -5,48 +5,54 @@ import { useApp } from '../App';
 import { GlassCard, Button } from '../components/Components';
 import { FlowIntensity, Mood, SYMPTOMS_LIST, DayLog, BleedingColor, DischargeType, MoodTranslation, DischargeTranslation } from '../types';
 import { formatDate, haptic } from '../utils';
-import { Droplet, Moon, GlassWater, Heart, Thermometer, Weight, Zap, Sparkles, Activity, Check, Minus, Plus } from 'lucide-react';
+import { Droplet, Moon, GlassWater, Heart, Thermometer, Weight, Zap, Sparkles, Activity, Check, Minus, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 const LogPage: React.FC = () => {
   const { logs, addLog, settings } = useApp();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dateParam = searchParams.get('date') || formatDate(new Date());
+  const initialMood = searchParams.get('mood');
 
   // Safe accessor for existing log to handle migration from old `mood` to new `moods`
   const getExistingLog = (): DayLog => {
     const log = logs[dateParam];
-    if (!log) {
-        return {
-            date: dateParam,
-            flow: FlowIntensity.None,
-            symptoms: [],
-            sleepHours: 8,
-            waterGlasses: 4,
-            sex: false,
-            notes: '',
-            moods: [],
-            bleedingClots: false,
-            painLevel: 0,
-            painLocations: [],
-            contraceptiveTaken: false,
-            energy: 'Medium',
-            stress: 'Low',
-        };
+    let baseLog: DayLog = {
+        date: dateParam,
+        flow: FlowIntensity.None,
+        symptoms: [],
+        sleepHours: 8,
+        waterGlasses: 4,
+        sex: false,
+        notes: '',
+        moods: [],
+        bleedingClots: false,
+        painLevel: 0,
+        painLocations: [],
+        contraceptiveTaken: false,
+        energy: 'Medium',
+        stress: 'Low',
+    };
+
+    if (log) {
+        baseLog = { ...baseLog, ...log };
+        // Migration: if log has 'mood' but not 'moods', fix it
+        if ((log as any).mood && (!log.moods || log.moods.length === 0)) {
+            baseLog.moods = [(log as any).mood];
+        }
     }
-    // Migration: if log has 'mood' but not 'moods', fix it
-    if ((log as any).mood && (!log.moods || log.moods.length === 0)) {
-        return { ...log, moods: [(log as any).mood] };
-    }
-    // Ensure moods is array
-    if (!log.moods) return { ...log, moods: [] };
     
-    return log;
+    // Add initial mood if passed via URL and not already present
+    if (initialMood && !baseLog.moods.includes(initialMood as Mood)) {
+        baseLog.moods = [...baseLog.moods, initialMood as Mood];
+    }
+    
+    return baseLog;
   };
 
   const [form, setForm] = useState<DayLog>(getExistingLog());
   const [isDirty, setIsDirty] = useState(false);
-  const [viewMode, setViewMode] = useState<'quick' | 'extended'>('quick');
+  const [showDetails, setShowDetails] = useState(false);
 
   // Sync with Telegram MainButton
   useEffect(() => {
@@ -64,7 +70,6 @@ const LogPage: React.FC = () => {
   }, [form, isDirty]);
 
   const handleSave = () => {
-      // Validation
       if (form.notes.length > 500) {
           if (window.Telegram?.WebApp) window.Telegram.WebApp.showAlert("Заметка слишком длинная!");
           else alert("Заметка слишком длинная");
@@ -107,33 +112,15 @@ const LogPage: React.FC = () => {
   return (
     <div className="pt-4 pb-24 space-y-6">
       
-      {/* Header & Mode Switch */}
-      <div className="flex flex-col items-center space-y-4">
-        <div className="text-center">
+      {/* Header */}
+      <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-800">Дневник</h2>
             <p className="text-gray-500 capitalize">{new Date(dateParam).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-        </div>
-        
-        {/* Toggle Pill */}
-        <div className="bg-white/50 p-1 rounded-full flex gap-1 shadow-inner w-64">
-             <button 
-                onClick={() => { haptic.selection(); setViewMode('quick'); }}
-                className={`flex-1 py-1.5 text-sm font-semibold rounded-full transition-all ${viewMode === 'quick' ? 'bg-white shadow text-primary' : 'text-gray-500'}`}
-             >
-                 Быстро
-             </button>
-             <button 
-                onClick={() => { haptic.selection(); setViewMode('extended'); }}
-                className={`flex-1 py-1.5 text-sm font-semibold rounded-full transition-all ${viewMode === 'extended' ? 'bg-white shadow text-primary' : 'text-gray-500'}`}
-             >
-                 Подробно
-             </button>
-        </div>
       </div>
 
-      {/* --- QUICK VIEW SECTIONS --- */}
+      {/* --- MAIN SECTIONS --- */}
 
-      {/* Flow Section (Always Visible) */}
+      {/* Flow Section */}
       <GlassCard className="p-5">
         <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><Droplet size={18} className="text-rose-500"/> Выделения</h3>
         <div className="flex justify-between gap-2">
@@ -148,8 +135,8 @@ const LogPage: React.FC = () => {
             ))}
         </div>
         
-        {/* Bleeding Details (Visible if Extended OR Flow > 0) */}
-        {(viewMode === 'extended' && form.flow > 0) && (
+        {/* Bleeding Details (Visible if Flow > 0 OR Expanded) */}
+        {(form.flow > 0 || showDetails) && (
             <div className="mt-4 pt-4 border-t border-gray-100 animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium text-gray-600">Цвет</span>
@@ -166,20 +153,11 @@ const LogPage: React.FC = () => {
                         ))}
                     </div>
                 </div>
-                <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Сгустки</span>
-                    <button 
-                         onClick={() => update('bleedingClots', !form.bleedingClots)}
-                         className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${form.bleedingClots ? 'bg-rose-100 text-rose-600' : 'bg-gray-100 text-gray-400'}`}
-                    >
-                        {form.bleedingClots ? 'ДА' : 'НЕТ'}
-                    </button>
-                </div>
             </div>
         )}
       </GlassCard>
 
-      {/* Mood Section (Quick) */}
+      {/* Mood Section */}
       <GlassCard className="p-5">
          <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><Sparkles size={18} className="text-purple-500"/> Настроение</h3>
          <div className="flex flex-wrap gap-2">
@@ -195,11 +173,11 @@ const LogPage: React.FC = () => {
          </div>
       </GlassCard>
 
-      {/* Symptoms (Quick chips) */}
+      {/* Symptoms */}
       <GlassCard className="p-5">
           <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><Activity size={18} className="text-orange-500"/> Симптомы</h3>
           <div className="flex flex-wrap gap-2">
-              {SYMPTOMS_LIST.slice(0, viewMode === 'quick' ? 6 : undefined).map(sym => (
+              {SYMPTOMS_LIST.slice(0, showDetails ? undefined : 6).map(sym => (
                   <button
                     key={sym}
                     onClick={() => toggleSymptom(sym)}
@@ -211,11 +189,97 @@ const LogPage: React.FC = () => {
           </div>
       </GlassCard>
 
-      {/* --- EXTENDED VIEW SECTIONS --- */}
-      {viewMode === 'extended' && (
+      {/* Common Sliders */}
+      <GlassCard className="p-5 space-y-6">
+          {/* Sleep */}
+          <div>
+              <div className="flex justify-between mb-3">
+                  <span className="text-gray-700 font-medium flex items-center gap-2"><Moon size={16}/> Сон</span>
+                  <span className="font-bold text-primary text-lg">{form.sleepHours}ч</span>
+              </div>
+              <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => update('sleepHours', Math.max(0, form.sleepHours - 0.5))}
+                    className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform"
+                  >
+                      <Minus size={18} />
+                  </button>
+                  {/* Improved Slider Touch Target */}
+                  <div className="relative flex-1 h-8 flex items-center">
+                    <input 
+                        type="range" min="0" max="14" step="0.5" 
+                        value={form.sleepHours} 
+                        onChange={(e) => update('sleepHours', parseFloat(e.target.value))}
+                        className="absolute w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="w-full h-2 bg-gray-200 rounded-lg overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${(form.sleepHours / 14) * 100}%` }} />
+                    </div>
+                    <div 
+                        className="absolute h-6 w-6 bg-white border-2 border-primary rounded-full shadow-md pointer-events-none transition-all"
+                        style={{ left: `calc(${(form.sleepHours / 14) * 100}% - 12px)` }}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => update('sleepHours', Math.min(14, form.sleepHours + 0.5))}
+                    className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform"
+                  >
+                      <Plus size={18} />
+                  </button>
+              </div>
+          </div>
+
+          {/* Water */}
+          <div>
+              <div className="flex justify-between mb-3">
+                  <span className="text-gray-700 font-medium flex items-center gap-2"><GlassWater size={16}/> Вода</span>
+                  <span className="font-bold text-blue-500">{form.waterGlasses} стаканов</span>
+              </div>
+               <div className="flex gap-1 h-12">
+                   {[1,2,3,4,5,6,7,8].map(g => (
+                       <button 
+                         key={g} 
+                         onClick={() => { 
+                             haptic.selection(); 
+                             update('waterGlasses', form.waterGlasses === g ? g - 1 : g); 
+                         }}
+                         className={`flex-1 rounded-md transition-all duration-300 ${g <= form.waterGlasses ? 'bg-blue-400 shadow-md transform scale-y-110' : 'bg-gray-100 hover:bg-gray-200'}`} 
+                       />
+                   ))}
+               </div>
+          </div>
+
+          {/* Sex Toggle - Fixed */}
+          <div className="flex justify-between items-center pt-2">
+              <span className="text-gray-700 font-medium flex items-center gap-2"><Heart size={16} /> Секс / Близость</span>
+              <button 
+                onClick={() => { 
+                    haptic.impact('medium'); 
+                    update('sex', !form.sex); 
+                }}
+                className={`w-14 h-8 rounded-full transition-colors relative duration-300 ${form.sex ? 'bg-rose-500' : 'bg-gray-300'}`}
+              >
+                  <div className={`absolute top-1 bg-white w-6 h-6 rounded-full transition-transform duration-300 shadow-sm ${form.sex ? 'translate-x-7' : 'translate-x-1'}`} />
+              </button>
+          </div>
+      </GlassCard>
+
+      {/* --- SHOW MORE BUTTON --- */}
+      <div className="flex justify-center">
+        <button 
+            onClick={() => setShowDetails(!showDetails)}
+            className="flex items-center gap-2 text-primary font-semibold text-sm py-2 px-4 rounded-full bg-white/50 hover:bg-white transition-colors"
+        >
+            {showDetails ? 'Скрыть детали' : 'Больше показателей'}
+            {showDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </div>
+
+      {/* --- EXPANDED SECTIONS --- */}
+      {showDetails && (
           <>
             {/* Physical Vitals */}
-            <GlassCard className="p-5 space-y-4 animate-in slide-in-from-bottom-4">
+            <GlassCard className="p-5 space-y-4 animate-in slide-in-from-bottom-4 fade-in">
                 <h3 className="font-semibold text-gray-700 flex items-center gap-2"><Weight size={18} className="text-blue-500"/> Тело и Показатели</h3>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -227,7 +291,7 @@ const LogPage: React.FC = () => {
                                 type="number" step="0.1" placeholder="36.6" 
                                 value={form.temperature || ''}
                                 onChange={e => update('temperature', parseFloat(e.target.value))}
-                                className="bg-transparent w-full font-bold text-gray-800 focus:outline-none"
+                                className="bg-transparent w-full font-bold text-gray-800 focus:outline-none placeholder-gray-300"
                             />
                         </div>
                     </div>
@@ -239,7 +303,7 @@ const LogPage: React.FC = () => {
                                 type="number" step="0.1" placeholder="60.0" 
                                 value={form.weight || ''}
                                 onChange={e => update('weight', parseFloat(e.target.value))}
-                                className="bg-transparent w-full font-bold text-gray-800 focus:outline-none"
+                                className="bg-transparent w-full font-bold text-gray-800 focus:outline-none placeholder-gray-300"
                             />
                         </div>
                     </div>
@@ -248,15 +312,15 @@ const LogPage: React.FC = () => {
                 {/* Discharge */}
                 <div>
                      <label className="text-sm font-semibold text-gray-600 mb-2 block">Выделения</label>
-                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                     <div className="grid grid-cols-2 gap-2">
                          {Object.values(DischargeType).map(t => (
                              <button 
                                 key={t} 
                                 onClick={() => update('discharge', t)}
-                                className={`py-2 px-2 text-xs rounded-lg border transition-all flex items-center justify-center gap-1 ${form.discharge === t ? 'bg-blue-100 border-blue-400 text-blue-700 shadow-sm font-bold ring-1 ring-blue-400' : 'bg-white/40 border-gray-200 text-gray-600'}`}
+                                className={`py-3 px-2 text-xs rounded-xl border transition-all flex items-center justify-center gap-2 ${form.discharge === t ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm font-bold' : 'bg-white/40 border-gray-200 text-gray-600'}`}
                              >
                                  {DischargeTranslation[t] || t}
-                                 {form.discharge === t && <Check size={12} />}
+                                 {form.discharge === t && <Check size={14} className="text-blue-600"/>}
                              </button>
                          ))}
                      </div>
@@ -264,35 +328,35 @@ const LogPage: React.FC = () => {
             </GlassCard>
 
             {/* Lifestyle & Energy */}
-            <GlassCard className="p-5 space-y-4 animate-in slide-in-from-bottom-8">
+            <GlassCard className="p-5 space-y-4 animate-in slide-in-from-bottom-8 fade-in">
                  <h3 className="font-semibold text-gray-700 flex items-center gap-2"><Zap size={18} className="text-yellow-500"/> Энергия и Образ жизни</h3>
                  
                  {/* Energy & Stress */}
-                 <div className="space-y-3">
-                     <div className="flex items-center justify-between">
-                         <span className="text-sm text-gray-600">Энергия</span>
-                         <div className="flex bg-gray-200 rounded-lg p-0.5">
+                 <div className="space-y-4">
+                     <div>
+                         <span className="text-sm text-gray-600 block mb-2">Энергия</span>
+                         <div className="grid grid-cols-3 gap-2">
                              {['Low', 'Medium', 'High'].map(l => (
                                  <button 
                                     key={l}
                                     onClick={() => update('energy', l)}
-                                    className={`px-3 py-1 text-xs rounded-md transition-all ${form.energy === l ? 'bg-white shadow text-yellow-600 font-bold' : 'text-gray-500'}`}
+                                    className={`py-2 text-xs rounded-lg transition-all border ${form.energy === l ? 'bg-yellow-100 border-yellow-300 text-yellow-800 font-bold' : 'bg-white/50 border-transparent text-gray-500'}`}
                                  >
-                                     {l === 'Low' ? 'Низ' : l === 'Medium' ? 'Сред' : 'Выс'}
+                                     {l === 'Low' ? 'Низкая' : l === 'Medium' ? 'Средняя' : 'Высокая'}
                                  </button>
                              ))}
                          </div>
                      </div>
-                     <div className="flex items-center justify-between">
-                         <span className="text-sm text-gray-600">Стресс</span>
-                         <div className="flex bg-gray-200 rounded-lg p-0.5">
+                     <div>
+                         <span className="text-sm text-gray-600 block mb-2">Стресс</span>
+                         <div className="grid grid-cols-3 gap-2">
                              {['Low', 'Medium', 'High'].map(l => (
                                  <button 
                                     key={l}
                                     onClick={() => update('stress', l)}
-                                    className={`px-3 py-1 text-xs rounded-md transition-all ${form.stress === l ? 'bg-white shadow text-red-500 font-bold' : 'text-gray-500'}`}
+                                    className={`py-2 text-xs rounded-lg transition-all border ${form.stress === l ? 'bg-red-100 border-red-300 text-red-800 font-bold' : 'bg-white/50 border-transparent text-gray-500'}`}
                                  >
-                                     {l === 'Low' ? 'Низ' : l === 'Medium' ? 'Сред' : 'Выс'}
+                                     {l === 'Low' ? 'Низкий' : l === 'Medium' ? 'Средний' : 'Высокий'}
                                  </button>
                              ))}
                          </div>
@@ -314,69 +378,6 @@ const LogPage: React.FC = () => {
             </GlassCard>
           </>
       )}
-
-      {/* Common Sliders (Always Visible) */}
-      <GlassCard className="p-5 space-y-6">
-          {/* Sleep */}
-          <div>
-              <div className="flex justify-between mb-3">
-                  <span className="text-gray-700 font-medium flex items-center gap-2"><Moon size={16}/> Сон</span>
-                  <span className="font-bold text-primary text-lg">{form.sleepHours}ч</span>
-              </div>
-              <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => update('sleepHours', Math.max(0, form.sleepHours - 0.5))}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200"
-                  >
-                      <Minus size={16} />
-                  </button>
-                  <input 
-                    type="range" min="0" max="14" step="0.5" 
-                    value={form.sleepHours} 
-                    onChange={(e) => update('sleepHours', parseFloat(e.target.value))}
-                    className="flex-1 accent-primary h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <button 
-                    onClick={() => update('sleepHours', Math.min(14, form.sleepHours + 0.5))}
-                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200"
-                  >
-                      <Plus size={16} />
-                  </button>
-              </div>
-          </div>
-
-          {/* Water */}
-          <div>
-              <div className="flex justify-between mb-3">
-                  <span className="text-gray-700 font-medium flex items-center gap-2"><GlassWater size={16}/> Вода</span>
-                  <span className="font-bold text-blue-500">{form.waterGlasses} стаканов</span>
-              </div>
-               <div className="flex gap-1">
-                   {[1,2,3,4,5,6,7,8].map(g => (
-                       <div 
-                         key={g} 
-                         onClick={() => { 
-                             haptic.selection(); 
-                             // If clicking the current max, decrease by 1. Else set to clicked level.
-                             update('waterGlasses', form.waterGlasses === g ? g - 1 : g); 
-                         }}
-                         className={`h-10 w-full rounded-md transition-all cursor-pointer ${g <= form.waterGlasses ? 'bg-blue-400 shadow-md transform scale-105' : 'bg-gray-100 hover:bg-gray-200'}`} 
-                       />
-                   ))}
-               </div>
-          </div>
-
-          {/* Sex Toggle */}
-          <div className="flex justify-between items-center pt-2">
-              <span className="text-gray-700 font-medium flex items-center gap-2"><Heart size={16} /> Секс / Близость</span>
-              <button 
-                onClick={() => { haptic.impact('medium'); update('sex', !form.sex); }}
-                className={`w-12 h-7 rounded-full transition-colors relative ${form.sex ? 'bg-rose-500' : 'bg-gray-300'}`}
-              >
-                  <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${form.sex ? 'left-6' : 'left-1'}`} />
-              </button>
-          </div>
-      </GlassCard>
 
       {/* Web Fallback Button */}
       {!window.Telegram?.WebApp && (
